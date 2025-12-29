@@ -1,24 +1,31 @@
-import json
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-
-def load_knowledge_base(file_path: str) -> dict:
-    with open(file_path, 'r') as file:
-        return json.load(file)
-
-knowledge_base = load_knowledge_base("knowledge_base.json")
-
-questions = [q["question"] for q in knowledge_base["questions"]]
-answers = [q["answer"] for q in knowledge_base["questions"]]
-intents = [str(i) for i in range(len(questions))]
-
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(questions)
-
-model = MultinomialNB()
-model.fit(X, intents)
+# chatbot.py
+from rapidfuzz import process, fuzz
+from .models import ChatbotKnowledge
 
 def get_answer(user_input: str) -> str:
-    X_test = vectorizer.transform([user_input])
-    predicted_intent = model.predict(X_test)[0]
-    return answers[int(predicted_intent)]
+    # 1. Fetch all questions from DB
+    knowledge_items = ChatbotKnowledge.objects.all()
+    if not knowledge_items:
+        return "Maaf, saya belum punya informasi apa pun."
+
+    choices = {item.id: item.question for item in knowledge_items}
+    print(choices)
+
+    # 2. Find the best match using fuzzy matching
+    # extractOne returns (string, score, index/key)
+    best_match = process.extractOne(
+        user_input,
+        choices,
+        scorer=fuzz.token_ratio
+    )
+
+    print(best_match)
+    print(f"score: {best_match[1]}")
+
+    # 3. Check if the match is good enough (score > 60)
+    score = best_match[1]
+    if score > 60:
+        match_id = best_match[2]
+        return ChatbotKnowledge.objects.get(id=match_id).answer
+
+    return "Saya tidak yakin tentang itu. Bisakah Anda mengulanginya?"

@@ -5,7 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "all-code",
     "django>=5.2.8",
+    "django-cotton>=2.6.0",
     "djangorestframework>=3.16.1",
+    "rapidfuzz>=3.14.3",
     "scikit-learn>=1.7.2",
 ]
+
+[tool.uv.sources]
+all-code = { git = "https://github.com/foxalabs/all_code" }
